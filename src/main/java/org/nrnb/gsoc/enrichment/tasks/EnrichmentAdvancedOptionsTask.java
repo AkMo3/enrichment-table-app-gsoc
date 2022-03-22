@@ -138,9 +138,9 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
             add(Level.FINE);
             add(Level.INFO);
             add(Level.SEVERE);
+            add(Level.WARNING);
         }});
-        logLevel.setSelectedValue(Level.OFF);
-
+        logLevel.setSelectedValue(Level.INFO);
     }
 
     //user sets the cycol -> update default -> the run the query
