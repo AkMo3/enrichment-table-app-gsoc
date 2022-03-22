@@ -11,6 +11,7 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.*;
 import org.cytoscape.application.swing.*;
 import org.cytoscape.model.*;
+import org.nrnb.gsoc.enrichment.utils.EtLogger;
 import org.nrnb.gsoc.enrichment.utils.ModelUtils;
 import org.nrnb.gsoc.enrichment.tasks.EnrichmentTask;
 import org.nrnb.gsoc.enrichment.ui.EnrichmentCytoPanel;
@@ -25,6 +26,7 @@ import org.cytoscape.work.util.ListSingleSelection;
 import org.cytoscape.work.TaskIterator;
 
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * @author ighosh98
@@ -76,6 +78,11 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
             params="lookup=begins", groups={"Required settings"}, gravity=10.0)
     public ListSingleSelection<String> geneID;
 
+    @Tunable(description = "Enrichment Table Logging Level",
+            exampleStringValue = "OFF",
+            groups = {"Optional settings"})
+    public ListSingleSelection<Level> logLevel;
+
     public Map<String,String> scientificNametoID;
 
     public EnrichmentAdvancedOptionsTask(CyServiceRegistrar registrar) {
@@ -126,6 +133,14 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
         ModelUtils.setNetSignificanceThresholdMethod(network,"g_SCS");
         ModelUtils.setNetUserThreshold(network,0.05);
 
+        logLevel = new ListSingleSelection<Level>(new ArrayList<Level>(){{
+            add(Level.OFF);
+            add(Level.FINE);
+            add(Level.INFO);
+            add(Level.SEVERE);
+        }});
+        logLevel.setSelectedValue(Level.OFF);
+
     }
 
     //user sets the cycol -> update default -> the run the query
@@ -142,6 +157,7 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
             ModelUtils.setNetGeneIDColumn(network, geneID.getSelectedValue().toString());
             ModelUtils.setNetNoIEA(network, no_iea);
             ModelUtils.setNetUserThreshold(network, user_threshold.getValue());
+            EtLogger.setMinimumLogLevel(logLevel.getSelectedValue());
             if(scientificNametoID.containsKey(organism.getSelectedValue())){
                 //System.out.println(organism.getSelectedValue());
                 ModelUtils.setNetOrganism(network,scientificNametoID.get(organism.getSelectedValue()));

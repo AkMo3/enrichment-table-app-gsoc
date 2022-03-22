@@ -16,12 +16,14 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.nrnb.gsoc.enrichment.constants.APP_CONSTANTS;
+import org.nrnb.gsoc.enrichment.utils.EtLogger;
 import org.nrnb.gsoc.enrichment.utils.ModelUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * @author ighosh98
@@ -136,7 +138,7 @@ public class HTTPRequestEngine {
         String url = urlConverter.toString();
         HttpPost httpPost = new HttpPost(url);
         String jsonBody = JSONValue.toJSONString(parameters);
-        //System.out.println(jsonBody);
+        EtLogger.log(Level.INFO, jsonBody);
         StringEntity entity = null;
         try {
             entity = new StringEntity(jsonBody);

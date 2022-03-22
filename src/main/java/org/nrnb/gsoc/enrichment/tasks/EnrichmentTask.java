@@ -18,11 +18,13 @@ import org.nrnb.gsoc.enrichment.RequestEngine.HTTPRequestEngine;
 import org.nrnb.gsoc.enrichment.RequestEngine.ScheduledRequestEngine;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm;
 import org.nrnb.gsoc.enrichment.ui.EnrichmentCytoPanel;
+import org.nrnb.gsoc.enrichment.utils.EtLogger;
 import org.nrnb.gsoc.enrichment.utils.ModelUtils;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm.TermSource;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
+import java.util.logging.Level;
 
 /**
  * @author ighosh98
@@ -158,6 +160,7 @@ public class EnrichmentTask extends AbstractTask implements ObservableTask {
 		List<Long> nodesToFilter = new ArrayList<Long>();
 		nodeList = nodesToFilterBy.getSelectedValues();
 		monitor.setTitle("gProfiler Enrichment Analysis");
+		EtLogger.log(Level.SEVERE, "Start of Enrichment Task");
 
 		if(nodeList.size()>0){
 			for (CyNode node : nodeList) {
