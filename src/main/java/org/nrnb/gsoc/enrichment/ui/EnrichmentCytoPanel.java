@@ -6,46 +6,62 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelComponent2;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.model.*;
-import org.cytoscape.model.events.*;
-import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.util.swing.CyColorPaletteChooserFactory;
-import org.cytoscape.util.swing.IconManager;
-import org.cytoscape.util.swing.TextIcon;
-import org.cytoscape.work.TaskIterator;
-import org.cytoscape.work.TaskManager;
+import org.cytoscape.application.swing.CytoPanelState;
+import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.CyNetworkManager;
+import org.cytoscape.model.CyNode;
+import org.cytoscape.model.CyRow;
+import org.cytoscape.model.CyTable;
+import org.cytoscape.model.CyTableFactory;
+import org.cytoscape.model.CyTableManager;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
+import org.cytoscape.model.events.RowSetRecord;
+import org.cytoscape.model.events.RowsSetEvent;
+import org.cytoscape.model.events.RowsSetListener;
+import org.cytoscape.model.events.SelectedNodesAndEdgesEvent;
+import org.cytoscape.model.events.SelectedNodesAndEdgesListener;
+import org.cytoscape.property.CyProperty;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.session.events.SessionLoadedEvent;
 import org.cytoscape.session.events.SessionLoadedListener;
+import org.cytoscape.util.swing.CyColorPaletteChooserFactory;
+import org.cytoscape.util.swing.IconManager;
+import org.cytoscape.work.TaskIterator;
+import org.cytoscape.work.TaskManager;
 import org.json.simple.JSONObject;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm.TermSource;
 import org.nrnb.gsoc.enrichment.tasks.EnrichmentAdvancedOptionsTask;
 import org.nrnb.gsoc.enrichment.tasks.EnrichmentTask;
-import org.nrnb.gsoc.enrichment.tasks.FilterEnrichmentTableTask;
 import org.nrnb.gsoc.enrichment.tasks.ExportEnrichmentTableTask;
+import org.nrnb.gsoc.enrichment.tasks.FilterEnrichmentTableTask;
 import org.nrnb.gsoc.enrichment.utils.ModelUtils;
-import org.cytoscape.application.swing.CytoPanelState;
-import org.cytoscape.property.CyProperty;
-import org.cytoscape.property.CyProperty.SavePolicy;
+
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableColumnModel;
 import javax.swing.table.JTableHeader;
-import java.awt.*;
+import javax.swing.table.TableColumnModel;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 
 /**
@@ -55,16 +71,30 @@ import java.util.List;
 public class EnrichmentCytoPanel extends JPanel
         implements CytoPanelComponent2, ActionListener, RowsSetListener, TableModelListener, SelectedNodesAndEdgesListener, NetworkAboutToBeDestroyedListener, SessionLoadedListener {
 
-    private CyTable enrichmentTable;
+    public final static String showTable = TermSource.ALL.getTable();
+    private static final Icon chartIcon = new ImageIcon(
+            EnrichmentCytoPanel.class.getResource("/images/chart20.png"));
+    private static final Icon icon = new ImageIcon(
+            EnrichmentCytoPanel.class.getResource("/images/enrichment-table14.png"));
+    final CyColorPaletteChooserFactory colorChooserFactory;
+    final Font iconFont;
+    final CyServiceRegistrar registrar;
+    final CyApplicationManager applicationManager;
+    final String butFilterName = "Filter enrichment table";
+    final String organismSelectTip = "Click gear icon to change organism";
+    final String geneIdSelectTip = "<html>Click gear icon to change <b>Node Table</b> column with gene identifiers</html>";
+    final String butSettingsName = "Network-specific enrichment panel settings";
+    final String butExportTableDescr = "Export enrichment table";
+    final String butRunProfilerName = "Perform Gene Enrichment";
     EnrichmentTableModel tableModel;
     Map<String, JTable> enrichmentTables;
     JPanel topPanel;
     JPanel mainPanel;
     JScrollPane scrollPane;
     List<String> availableTables;
-    final CyColorPaletteChooserFactory colorChooserFactory;
-    public final static String showTable = TermSource.ALL.getTable();
     JLabel labelRows;
+
+    // TODO: Quick settings options -> Drop down to select column and auto complete species
     JButton butAdvancedOptions;
     JButton butExportTable;
     JButton butRunProfiler;
@@ -74,41 +104,25 @@ public class EnrichmentCytoPanel extends JPanel
     TableColumnModel columnModel;
     CyTable filteredEnrichmentTable = null;
     boolean clearSelection = false;
-    private String[] columnToolTips = {
-    "the full name of the datasource for the term",
-    "term ID in its native namespace. For non-GO terms, the ID is prefixed with the datasource abbreviation",
-    "term name",
-    "term description if available. If not available, repeats the term name",
-    "hypergeometric p-value after correction for multiple testing",
-    "the number of genes that were included in the query",
-    "the total number of genes 'in the universe' which is used as one of the four parameters for the hypergeometric probability function of statistical significance",
-    "the number of genes that are annotated to the term",
-    "the number of genes in the query that are annotated to the corresponding term",
-    "the proportion of genes in the input list that are annotated to the function, defined as intersection_size/query_size",
-    "the proportion of functionally annotated genes that the query recovers, defined as intersection_size/term_size",
-    "llist of query genes intersecting with terms"
-  };
-
-     // TODO: Quick settings options -> Drop down to select column and auto complete species
-
-    private static final Icon chartIcon = new ImageIcon(
-            EnrichmentCytoPanel.class.getResource("/images/chart20.png"));
-    final Font iconFont;
-    final CyServiceRegistrar registrar;
-    private static final Icon icon = new ImageIcon(
-            EnrichmentCytoPanel.class.getResource("/images/enrichment-table14.png"));
-    final CyApplicationManager applicationManager;
-
-    final String butFilterName = "Filter enrichment table";
-    final String organismSelectTip = "Click gear icon to change organism";
-    final String geneIdSelectTip = "<html>Click gear icon to change <b>Node Table</b> column with gene identifiers</html>";
-    final String butSettingsName = "Network-specific enrichment panel settings";
-    final String butExportTableDescr = "Export enrichment table";
-    final String butRunProfilerName = "Perform Gene Enrichment";
-    private boolean noSignificant;
-    private JSONObject result;
     CyTableFactory tableFactory;
     CyTableManager tableManager;
+    private CyTable enrichmentTable;
+    private String[] columnToolTips = {
+            "the full name of the datasource for the term",
+            "term ID in its native namespace. For non-GO terms, the ID is prefixed with the datasource abbreviation",
+            "term name",
+            "term description if available. If not available, repeats the term name",
+            "hypergeometric p-value after correction for multiple testing",
+            "the number of genes that were included in the query",
+            "the total number of genes 'in the universe' which is used as one of the four parameters for the hypergeometric probability function of statistical significance",
+            "the number of genes that are annotated to the term",
+            "the number of genes in the query that are annotated to the corresponding term",
+            "the proportion of genes in the input list that are annotated to the function, defined as intersection_size/query_size",
+            "the proportion of functionally annotated genes that the query recovers, defined as intersection_size/term_size",
+            "llist of query genes intersecting with terms"
+    };
+    private boolean noSignificant;
+    private JSONObject result;
     private CyProperty<Properties> sessionProperties;
 
 
@@ -125,7 +139,7 @@ public class EnrichmentCytoPanel extends JPanel
         initPanel(this.noSignificant);
     }
 
-    public void setEnrichmentTable(CyTable enrichmentTable){
+    public void setEnrichmentTable(CyTable enrichmentTable) {
         this.enrichmentTable = enrichmentTable;
         initPanel(this.noSignificant);
     }
@@ -155,21 +169,21 @@ public class EnrichmentCytoPanel extends JPanel
         return icon;
     }
 
-    public EnrichmentTableModel getTableModel() { return tableModel; }
+    public EnrichmentTableModel getTableModel() {
+        return tableModel;
+    }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         CyNetwork network = applicationManager.getCurrentNetwork();
         TaskManager<?, ?> tm = registrar.getService(TaskManager.class);
         if (e.getSource().equals(butRunProfiler)) {
-            tm.execute(new TaskIterator(new EnrichmentTask(registrar,this)));
-        }
-        else if (e.getSource().equals(butFilter)) {
-            tm.execute(new TaskIterator(new FilterEnrichmentTableTask(registrar,this)));
-        }
-        else if (e.getSource().equals(butExportTable)) {
+            tm.execute(new TaskIterator(new EnrichmentTask(registrar, this)));
+        } else if (e.getSource().equals(butFilter)) {
+            tm.execute(new TaskIterator(new FilterEnrichmentTableTask(registrar, this)));
+        } else if (e.getSource().equals(butExportTable)) {
             if (network != null) {
-                if(enrichmentTable!=null) {
+                if (enrichmentTable != null) {
                     tm.execute(new TaskIterator(new ExportEnrichmentTableTask(registrar, network, this, enrichmentTable)));
                 }
             }
@@ -195,20 +209,20 @@ public class EnrichmentCytoPanel extends JPanel
             return null;
         }
         CyTableFactory tableFactory = registrar.getService(CyTableFactory.class);
-    		CyTableManager tableManager = registrar.getService(CyTableManager.class);
-    		filteredEnrichmentTable = tableFactory.createTable(TermSource.ALLFILTERED.getTable(),
-    		                                                   EnrichmentTerm.colID, Long.class, false, true);
-    		filteredEnrichmentTable.setTitle("Enrichment: filtered");
-    		//filteredEnrichmentTable.setSavePolicy(SavePolicy.DO_NOT_SAVE);
-    		tableManager.addTable(filteredEnrichmentTable);
-    		ModelUtils.setupEnrichmentTable(filteredEnrichmentTable);
+        CyTableManager tableManager = registrar.getService(CyTableManager.class);
+        filteredEnrichmentTable = tableFactory.createTable(TermSource.ALLFILTERED.getTable(),
+                EnrichmentTerm.colID, Long.class, false, true);
+        filteredEnrichmentTable.setTitle("Enrichment: filtered");
+        //filteredEnrichmentTable.setSavePolicy(SavePolicy.DO_NOT_SAVE);
+        tableManager.addTable(filteredEnrichmentTable);
+        ModelUtils.setupEnrichmentTable(filteredEnrichmentTable);
         updateFilteredEnrichmentTable();
         return filteredEnrichmentTable;
     }
 
     /**
-     * @description Initialises the panel design
      * @param noSignificant
+     * @description Initialises the panel design
      */
     public void initPanel(boolean noSignificant) {
         CyNetwork network = applicationManager.getCurrentNetwork();
@@ -226,7 +240,7 @@ public class EnrichmentCytoPanel extends JPanel
         butRunProfiler.setBorderPainted(false);
         butRunProfiler.setContentAreaFilled(false);
         butRunProfiler.setFocusPainted(false);
-        butRunProfiler.setBorder(BorderFactory.createEmptyBorder(2,10,2,10));
+        butRunProfiler.setBorder(BorderFactory.createEmptyBorder(2, 10, 2, 10));
 
         butFilter = new JButton(IconManager.ICON_FILTER);
         butFilter.setFont(iconFont);
@@ -235,7 +249,7 @@ public class EnrichmentCytoPanel extends JPanel
         butFilter.setBorderPainted(false);
         butFilter.setContentAreaFilled(false);
         butFilter.setFocusPainted(false);
-        butFilter.setBorder(BorderFactory.createEmptyBorder(2,10,2,10));
+        butFilter.setBorder(BorderFactory.createEmptyBorder(2, 10, 2, 10));
 
 
         buttonsPanelLeft.add(butRunProfiler);
@@ -249,20 +263,20 @@ public class EnrichmentCytoPanel extends JPanel
         JPanel buttonsPanelCenter = new JPanel();
         buttonsPanelCenter.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 5));
 
-        if(network == null){
-          organismSelect = new JLabel("Organism: null", JLabel.LEFT);
-        } else if (ModelUtils.getNetOrganism(network) == null){
-        organismSelect = new JLabel("Organism: hsapiens", JLabel.LEFT);
+        if (network == null) {
+            organismSelect = new JLabel("Organism: null", JLabel.LEFT);
+        } else if (ModelUtils.getNetOrganism(network) == null) {
+            organismSelect = new JLabel("Organism: hsapiens", JLabel.LEFT);
         } else {
-        organismSelect = new JLabel("Organism: " + ModelUtils.getNetOrganism(network), JLabel.LEFT);
+            organismSelect = new JLabel("Organism: " + ModelUtils.getNetOrganism(network), JLabel.LEFT);
         }
         organismSelect.setToolTipText(organismSelectTip);
-        if(network == null){
-          geneIdSelect = new JLabel("Gene ID column: null", JLabel.LEFT);
-        } else if (ModelUtils.getNetGeneIDColumn(network) == null){
-          geneIdSelect = new JLabel("Gene ID column: name", JLabel.LEFT);
+        if (network == null) {
+            geneIdSelect = new JLabel("Gene ID column: null", JLabel.LEFT);
+        } else if (ModelUtils.getNetGeneIDColumn(network) == null) {
+            geneIdSelect = new JLabel("Gene ID column: name", JLabel.LEFT);
         } else {
-          geneIdSelect = new JLabel("Gene ID column: " + ModelUtils.getNetGeneIDColumn(network), JLabel.LEFT);
+            geneIdSelect = new JLabel("Gene ID column: " + ModelUtils.getNetGeneIDColumn(network), JLabel.LEFT);
         }
         geneIdSelect.setToolTipText(geneIdSelectTip);
 
@@ -293,7 +307,7 @@ public class EnrichmentCytoPanel extends JPanel
         butAdvancedOptions.setBorderPainted(false);
         butAdvancedOptions.setContentAreaFilled(false);
         butAdvancedOptions.setFocusPainted(false);
-        butAdvancedOptions.setBorder(BorderFactory.createEmptyBorder(2,4,2,10));
+        butAdvancedOptions.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 10));
 
         buttonsPanelRight.add(butExportTable);
         buttonsPanelRight.add(butAdvancedOptions);
@@ -309,9 +323,9 @@ public class EnrichmentCytoPanel extends JPanel
     }
 
     /**
-     * @description Initialises the panel design
      * @param network
      * @param noSignificant
+     * @description Initialises the panel design
      */
     public void initPanel(CyNetwork network, boolean noSignificant) {
         this.removeAll();
@@ -336,20 +350,20 @@ public class EnrichmentCytoPanel extends JPanel
         JPanel buttonsPanelCenter = new JPanel();
         buttonsPanelCenter.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 5));
 
-        if(network == null){
-          organismSelect = new JLabel("Organism: null", JLabel.LEFT);
-        } else if (ModelUtils.getNetOrganism(network) == null){
-        organismSelect = new JLabel("Organism: hsapiens", JLabel.LEFT);
+        if (network == null) {
+            organismSelect = new JLabel("Organism: null", JLabel.LEFT);
+        } else if (ModelUtils.getNetOrganism(network) == null) {
+            organismSelect = new JLabel("Organism: hsapiens", JLabel.LEFT);
         } else {
-        organismSelect = new JLabel("Organism: " + ModelUtils.getNetOrganism(network), JLabel.LEFT);
+            organismSelect = new JLabel("Organism: " + ModelUtils.getNetOrganism(network), JLabel.LEFT);
         }
         organismSelect.setToolTipText(organismSelectTip);
-        if(network == null){
-          geneIdSelect = new JLabel("Gene ID column: null", JLabel.LEFT);
-        } else if (ModelUtils.getNetGeneIDColumn(network) == null){
-          geneIdSelect = new JLabel("Gene ID column: name", JLabel.LEFT);
+        if (network == null) {
+            geneIdSelect = new JLabel("Gene ID column: null", JLabel.LEFT);
+        } else if (ModelUtils.getNetGeneIDColumn(network) == null) {
+            geneIdSelect = new JLabel("Gene ID column: name", JLabel.LEFT);
         } else {
-          geneIdSelect = new JLabel("Gene ID column: " + ModelUtils.getNetGeneIDColumn(network), JLabel.LEFT);
+            geneIdSelect = new JLabel("Gene ID column: " + ModelUtils.getNetGeneIDColumn(network), JLabel.LEFT);
         }
         geneIdSelect.setToolTipText(geneIdSelectTip);
 
@@ -380,7 +394,7 @@ public class EnrichmentCytoPanel extends JPanel
         butAdvancedOptions.setBorderPainted(false);
         butAdvancedOptions.setContentAreaFilled(false);
         butAdvancedOptions.setFocusPainted(false);
-        butAdvancedOptions.setBorder(BorderFactory.createEmptyBorder(2,4,2,10));
+        butAdvancedOptions.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 10));
 
         buttonsPanelRight.add(butExportTable);
         buttonsPanelRight.add(butAdvancedOptions);
@@ -408,14 +422,14 @@ public class EnrichmentCytoPanel extends JPanel
         } else {
 
 
-            if(enrichmentTable==null){
+            if (enrichmentTable == null) {
                 CyTableManager tableManager = registrar.getService(CyTableManager.class);
                 tableFactory = registrar.getService(CyTableFactory.class);
-                enrichmentTable = tableFactory.createTable(TermSource.ALL.getTable(),EnrichmentTerm.colID,Long.class,false, true);
+                enrichmentTable = tableFactory.createTable(TermSource.ALL.getTable(), EnrichmentTerm.colID, Long.class, false, true);
                 tableManager.addTable(enrichmentTable);
             }
             createJTable(enrichmentTable);
-    //        System.out.println("Table model: "+ tableModel.getColumnCount());
+            //        System.out.println("Table model: "+ tableModel.getColumnCount());
             // Check if values are git mbeing received correctly
             List<CyRow> rows = enrichmentTable.getAllRows();
             availableTables.add(enrichmentTable.getTitle());
@@ -430,7 +444,7 @@ public class EnrichmentCytoPanel extends JPanel
             updateLabelRows();
             labelRows.setHorizontalAlignment(JLabel.RIGHT);
             Font labelFont = labelRows.getFont();
-            labelRows.setFont(labelFont.deriveFont((float)(labelFont.getSize() * 0.8)));
+            labelRows.setFont(labelFont.deriveFont((float) (labelFont.getSize() * 0.8)));
 
             mainPanel = new JPanel(new BorderLayout());
             scrollPane = new JScrollPane(currentTable);
@@ -443,25 +457,25 @@ public class EnrichmentCytoPanel extends JPanel
     }
 
     /**
-     * @description Creates the settings table
      * @param cyTable
+     * @description Creates the settings table
      */
     private void createJTable(CyTable cyTable) {
         tableModel = new EnrichmentTableModel(enrichmentTable, EnrichmentTerm.swingColumnsEnrichment);
-        JTable jTable = new JTable(tableModel){
-          //Implement table header tool tips.
-          protected JTableHeader createDefaultTableHeader() {
-            return new JTableHeader(columnModel) {
-              public String getToolTipText(MouseEvent e) {
-                String tip = null;
-                java.awt.Point p = e.getPoint();
-                int index = columnModel.getColumnIndexAtX(p.x);
-                int realIndex =
-                  columnModel.getColumn(index).getModelIndex();
-                return columnToolTips[realIndex];
-              }
-            };
-          }
+        JTable jTable = new JTable(tableModel) {
+            //Implement table header tool tips.
+            protected JTableHeader createDefaultTableHeader() {
+                return new JTableHeader(columnModel) {
+                    public String getToolTipText(MouseEvent e) {
+                        String tip = null;
+                        java.awt.Point p = e.getPoint();
+                        int index = columnModel.getColumnIndexAtX(p.x);
+                        int realIndex =
+                                columnModel.getColumn(index).getModelIndex();
+                        return columnToolTips[realIndex];
+                    }
+                };
+            }
         };
         jTable.getColumnModel().getColumn(12).setMinWidth(0);
         jTable.getColumnModel().getColumn(12).setMaxWidth(0);
@@ -483,24 +497,24 @@ public class EnrichmentCytoPanel extends JPanel
                 if (network == null)
                     return;
 
-                if(jTable==null){
+                if (jTable == null) {
                     return;
                 }
 
                 if (columnCount == 1 && rows > -1) {
-                  if (jTable.getSelectedRowCount() == 1)
-                      clearNetworkSelection(network);
-                        for (int row: jTable.getSelectedRows()) {
-                            Object cellContent =
-                                    jTable.getModel().getValueAt(jTable.convertRowIndexToModel(row),
-                                            EnrichmentTerm.nodeSUIDColumn);
-                            if (cellContent instanceof java.util.List) {
-                                java.util.List<Long> nodeIDs = (List<Long>) cellContent;
-                                for (Long nodeID : nodeIDs) {
-                                    network.getDefaultNodeTable().getRow(nodeID).set(CyNetwork.SELECTED, true);
-                                }
+                    if (jTable.getSelectedRowCount() == 1)
+                        clearNetworkSelection(network);
+                    for (int row : jTable.getSelectedRows()) {
+                        Object cellContent =
+                                jTable.getModel().getValueAt(jTable.convertRowIndexToModel(row),
+                                        EnrichmentTerm.nodeSUIDColumn);
+                        if (cellContent instanceof java.util.List) {
+                            java.util.List<Long> nodeIDs = (List<Long>) cellContent;
+                            for (Long nodeID : nodeIDs) {
+                                network.getDefaultNodeTable().getRow(nodeID).set(CyNetwork.SELECTED, true);
                             }
                         }
+                    }
                 }
             }
         });
@@ -510,29 +524,28 @@ public class EnrichmentCytoPanel extends JPanel
         jTable.addMouseListener(new MouseAdapter() {
 
             public void mousePressed(MouseEvent e) {
-                    JTable source = (JTable) e.getSource();
-                    int row = source.rowAtPoint(e.getPoint());
-                    int column = source.columnAtPoint(e.getPoint());
-                    if (!source.isRowSelected(row)) {
-                        source.changeSelection(row, column, false, false);
-                    }
+                JTable source = (JTable) e.getSource();
+                int row = source.rowAtPoint(e.getPoint());
+                int column = source.columnAtPoint(e.getPoint());
+                if (!source.isRowSelected(row)) {
+                    source.changeSelection(row, column, false, false);
+                }
 
             }
 
             public void mouseReleased(MouseEvent e) {
-                    JTable source = (JTable) e.getSource();
-                    int row = source.rowAtPoint(e.getPoint());
-                    int column = source.columnAtPoint(e.getPoint());
-                    if (!source.isRowSelected(row)) {
-                        source.changeSelection(row, column, false, false);
-                    }
+                JTable source = (JTable) e.getSource();
+                int row = source.rowAtPoint(e.getPoint());
+                int column = source.columnAtPoint(e.getPoint());
+                if (!source.isRowSelected(row)) {
+                    source.changeSelection(row, column, false, false);
+                }
 
             }
         });
         enrichmentTables.put(enrichmentTable.getTitle(), jTable);
 
     }
-
 
 
     public CyTable updateFilteredEnrichmentTable() {
@@ -570,10 +583,10 @@ public class EnrichmentCytoPanel extends JPanel
             return;
         CyTable enrichmentTable = ModelUtils.getEnrichmentTable(registrar, network,
                 TermSource.ALL.getTable());
-        Color color = (Color)currentTable.getModel().getValueAt(
+        Color color = (Color) currentTable.getModel().getValueAt(
                 currentTable.convertRowIndexToModel(currentRow),
                 EnrichmentTerm.chartColumnCol);
-        String termName = (String)currentTable.getModel().getValueAt(
+        String termName = (String) currentTable.getModel().getValueAt(
                 currentTable.convertRowIndexToModel(currentRow),
                 EnrichmentTerm.nameColumn);
         if (color == null || termName == null)
@@ -583,7 +596,7 @@ public class EnrichmentCytoPanel extends JPanel
             if (enrichmentTable.getColumn(EnrichmentTerm.colName) != null
                     && row.get(EnrichmentTerm.colName, String.class) != null
                     && row.get(EnrichmentTerm.colName, String.class).equals(termName)) {
-             //   row.set(EnrichmentTerm.colChartColor, "");
+                //   row.set(EnrichmentTerm.colChartColor, "");
             }
         }
         tableModel.fireTableDataChanged();
@@ -591,13 +604,12 @@ public class EnrichmentCytoPanel extends JPanel
     }
 
 
-
     public void updateLabelRows() {
         if (tableModel == null)
             return;
         String labelTxt = "";
         if (tableModel.getAllRowCount() != tableModel.getRowCount()) {
-            labelTxt = tableModel.getRowCount() + " rows ("+tableModel.getAllRowCount()+" before filtering)";
+            labelTxt = tableModel.getRowCount() + " rows (" + tableModel.getAllRowCount() + " before filtering)";
         } else {
             labelTxt = tableModel.getAllRowCount() + " rows";
         }
@@ -613,22 +625,22 @@ public class EnrichmentCytoPanel extends JPanel
 
         updateLabelRows();
         JTable currentTable = enrichmentTables.get(showTable);
-        if (currentTable == null){
-          currentTable = enrichmentTables.get(enrichmentTable.getTitle());
+        if (currentTable == null) {
+            currentTable = enrichmentTables.get(enrichmentTable.getTitle());
         }
         currentTable.tableChanged(e);
     }
 
     private void clearNetworkSelection(CyNetwork network) {
-  		List<CyNode> nodes = network.getNodeList();
-  		clearSelection = true;
-  		for (CyNode node : nodes) {
-  			if (network.getRow(node).get(CyNetwork.SELECTED, Boolean.class)) {
-  				network.getRow(node).set(CyNetwork.SELECTED, false);
-  			}
-  		}
-  		clearSelection = false;
-  	}
+        List<CyNode> nodes = network.getNodeList();
+        clearSelection = true;
+        for (CyNode node : nodes) {
+            if (network.getRow(node).get(CyNetwork.SELECTED, Boolean.class)) {
+                network.getRow(node).set(CyNetwork.SELECTED, false);
+            }
+        }
+        clearSelection = false;
+    }
 
     @Override
     public void handleEvent(RowsSetEvent rse) {
@@ -652,22 +664,22 @@ public class EnrichmentCytoPanel extends JPanel
             return;
         }
         CyNetwork network = applicationManager.getCurrentNetwork();
-		      JTable currentTable = enrichmentTables.get(showTable);
-		        if (!clearSelection && network != null && currentTable != null) {
-			           List<CyNode> nodes = network.getNodeList();
-			              for (CyNode node : nodes) {
-				                  if (network.getRow(node).get(CyNetwork.SELECTED, Boolean.class)) {
-					                       return;
-				                           }
-			                              }
-			                                 currentTable.clearSelection();
-		                                   }
+        JTable currentTable = enrichmentTables.get(showTable);
+        if (!clearSelection && network != null && currentTable != null) {
+            List<CyNode> nodes = network.getNodeList();
+            for (CyNode node : nodes) {
+                if (network.getRow(node).get(CyNetwork.SELECTED, Boolean.class)) {
+                    return;
+                }
+            }
+            currentTable.clearSelection();
+        }
     }
 
     @Override
     public void handleEvent(SelectedNodesAndEdgesEvent event) {
         JTable table = enrichmentTables.get(showTable);
-        if (table!=null && table.getSelectedRow() > -1 &&
+        if (table != null && table.getSelectedRow() > -1 &&
                 table.getSelectedColumnCount() == 1 &&
                 table.getSelectedColumn() != EnrichmentTerm.chartColumnCol)
             return;
@@ -684,58 +696,58 @@ public class EnrichmentCytoPanel extends JPanel
 
     @Override
     public void handleEvent(NetworkAboutToBeDestroyedEvent e) {
-      CyNetwork network = e.getNetwork();
-      // delete enrichment tables
-      CyTableManager tableManager = registrar.getService(CyTableManager.class);
-      Set<CyTable> oldTables = ModelUtils.getEnrichmentTables(registrar, network);
-      for (CyTable table : oldTables) {
-        tableManager.deleteTable(table.getSUID());
-      }
-
-      CySwingApplication swingApplication = registrar.getService(CySwingApplication.class);
-      CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.SOUTH);
-
-      if (cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment") >= 0) {
-        int compIndex = cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment");
-        Component panel = cytoPanel.getComponentAt(compIndex);
-        if (panel instanceof CytoPanelComponent2) {
-          registrar.unregisterService(panel, CytoPanelComponent.class);
-          registrar.unregisterService(panel, RowsSetListener.class);
-          registrar.unregisterService(panel, SelectedNodesAndEdgesListener.class);
-          }
-      }
-
-      CytoPanelComponent2 panel = new EnrichmentCytoPanel(registrar, noSignificant, null);
-			registrar.registerService(panel, CytoPanelComponent.class, new Properties());
-			registrar.registerService(panel, RowsSetListener.class, new Properties());
-			registrar.registerService(panel, SelectedNodesAndEdgesListener.class, new Properties());
-			if (cytoPanel.getState() == CytoPanelState.HIDE)
-				cytoPanel.setState(CytoPanelState.DOCK);
-			cytoPanel.setSelectedIndex(
-					cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment"));
+        CyNetwork network = e.getNetwork();
+        // delete enrichment tables
+        CyTableManager tableManager = registrar.getService(CyTableManager.class);
+        Set<CyTable> oldTables = ModelUtils.getEnrichmentTables(registrar, network);
+        for (CyTable table : oldTables) {
+            tableManager.deleteTable(table.getSUID());
         }
 
-    public void handleEvent(SessionLoadedEvent arg0) {
-      CySwingApplication swingApplication = registrar.getService(CySwingApplication.class);
-    		CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.SOUTH);
+        CySwingApplication swingApplication = registrar.getService(CySwingApplication.class);
+        CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.SOUTH);
+
         if (cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment") >= 0) {
-          int compIndex = cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment");
-          Component panel = cytoPanel.getComponentAt(compIndex);
-          if (panel instanceof CytoPanelComponent2) {
-            registrar.unregisterService(panel, CytoPanelComponent.class);
-            registrar.unregisterService(panel, RowsSetListener.class);
-            registrar.unregisterService(panel, SelectedNodesAndEdgesListener.class);
+            int compIndex = cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment");
+            Component panel = cytoPanel.getComponentAt(compIndex);
+            if (panel instanceof CytoPanelComponent2) {
+                registrar.unregisterService(panel, CytoPanelComponent.class);
+                registrar.unregisterService(panel, RowsSetListener.class);
+                registrar.unregisterService(panel, SelectedNodesAndEdgesListener.class);
+            }
+        }
+
+        CytoPanelComponent2 panel = new EnrichmentCytoPanel(registrar, noSignificant, null);
+        registrar.registerService(panel, CytoPanelComponent.class, new Properties());
+        registrar.registerService(panel, RowsSetListener.class, new Properties());
+        registrar.registerService(panel, SelectedNodesAndEdgesListener.class, new Properties());
+        if (cytoPanel.getState() == CytoPanelState.HIDE)
+            cytoPanel.setState(CytoPanelState.DOCK);
+        cytoPanel.setSelectedIndex(
+                cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment"));
+    }
+
+    public void handleEvent(SessionLoadedEvent arg0) {
+        CySwingApplication swingApplication = registrar.getService(CySwingApplication.class);
+        CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.SOUTH);
+        if (cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment") >= 0) {
+            int compIndex = cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment");
+            Component panel = cytoPanel.getComponentAt(compIndex);
+            if (panel instanceof CytoPanelComponent2) {
+                registrar.unregisterService(panel, CytoPanelComponent.class);
+                registrar.unregisterService(panel, RowsSetListener.class);
+                registrar.unregisterService(panel, SelectedNodesAndEdgesListener.class);
             }
         }
         //if (cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment") < 0) {
-      			CytoPanelComponent2 panel =  new EnrichmentCytoPanel(registrar, noSignificant, null);
-      			registrar.registerService(panel, CytoPanelComponent.class, new Properties());
-            registrar.registerService(panel, RowsSetListener.class, new Properties());
-            registrar.registerService(panel, SelectedNodesAndEdgesListener.class, new Properties());
-      			if (cytoPanel.getState() == CytoPanelState.HIDE)
-      				cytoPanel.setState(CytoPanelState.DOCK);
-            cytoPanel.setSelectedIndex(
-              cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment"));
-		}
+        CytoPanelComponent2 panel = new EnrichmentCytoPanel(registrar, noSignificant, null);
+        registrar.registerService(panel, CytoPanelComponent.class, new Properties());
+        registrar.registerService(panel, RowsSetListener.class, new Properties());
+        registrar.registerService(panel, SelectedNodesAndEdgesListener.class, new Properties());
+        if (cytoPanel.getState() == CytoPanelState.HIDE)
+            cytoPanel.setState(CytoPanelState.DOCK);
+        cytoPanel.setSelectedIndex(
+                cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment"));
+    }
 
 }

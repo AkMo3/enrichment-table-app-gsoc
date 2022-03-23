@@ -32,25 +32,19 @@ package org.nrnb.gsoc.enrichment.ui;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import java.awt.Component;
+import org.cytoscape.model.CyNetwork;
+import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.util.color.Palette;
+import org.cytoscape.util.swing.CyColorPaletteChooserFactory;
 
 import javax.swing.AbstractCellEditor;
-import javax.swing.table.TableCellEditor;
-
 import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JTable;
+import javax.swing.table.TableCellEditor;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
-import org.cytoscape.model.CyNetwork;
-import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.util.color.BrewerType;
-import org.cytoscape.util.color.Palette;
-import org.cytoscape.util.swing.CyColorPaletteChooser;
-import org.cytoscape.util.swing.CyColorPaletteChooserFactory;
 
 
 /*
@@ -61,15 +55,15 @@ import org.cytoscape.util.swing.CyColorPaletteChooserFactory;
 public class ColorEditor extends AbstractCellEditor
         implements TableCellEditor,
         ActionListener {
+    protected static final String EDIT = "edit";
+    final Component parent;
+    final CyServiceRegistrar registrar;
+    final CyNetwork network;
     Color currentColor;
     Palette currentPalette;
     JButton button;
     // JColorChooser colorChooser;
     CyColorPaletteChooserFactory chooserFactory;
-    final Component parent;
-    final CyServiceRegistrar registrar;
-    final CyNetwork network;
-    protected static final String EDIT = "edit";
 
     public ColorEditor(final CyServiceRegistrar registrar, final Component parent,
                        final CyColorPaletteChooserFactory chooserFactory, final CyNetwork network) {
@@ -122,12 +116,9 @@ public class ColorEditor extends AbstractCellEditor
     }
 
     //Implement the one method defined by TableCellEditor.
-    public Component getTableCellEditorComponent(JTable table,
-                                                 Object value,
-                                                 boolean isSelected,
-                                                 int row,
-                                                 int column) {
-        currentColor = (Color)value;
+    public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected,
+                                                 int row, int column) {
+        currentColor = (Color) value;
         return button;
     }
 }

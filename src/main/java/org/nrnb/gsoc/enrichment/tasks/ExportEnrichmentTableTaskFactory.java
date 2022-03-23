@@ -28,11 +28,9 @@ public class ExportEnrichmentTableTaskFactory extends AbstractNetworkTaskFactory
                     cytoPanel.indexOfComponent("org.nrnb.gsoc.enrichment"));
         }
     }
+
     public boolean isReady(CyNetwork network) {
-        if (ModelUtils.getEnrichmentTables(registrar, network).size() > 0)
-            return true;
-        else
-            return false;
+        return ModelUtils.getEnrichmentTables(registrar, network).size() > 0;
     }
 
     @Override

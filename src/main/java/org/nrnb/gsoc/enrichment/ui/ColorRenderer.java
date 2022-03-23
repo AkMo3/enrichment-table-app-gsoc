@@ -31,14 +31,13 @@ package org.nrnb.gsoc.enrichment.ui;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import java.awt.Color;
-import java.awt.Component;
-
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.border.Border;
 import javax.swing.table.TableCellRenderer;
+import java.awt.Color;
+import java.awt.Component;
 
 /*
  * ColorRenderer.java (compiles with releases 1.2, 1.3, and 1.4) is used by

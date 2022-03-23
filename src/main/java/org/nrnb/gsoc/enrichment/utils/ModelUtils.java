@@ -1,26 +1,25 @@
 package org.nrnb.gsoc.enrichment.utils;
 
+import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.model.*;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.property.AbstractConfigDirPropsReader;
+import org.cytoscape.property.CyProperty;
+import org.cytoscape.property.CyProperty.SavePolicy;
+import org.cytoscape.property.SimpleCyProperty;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.model.View;
-import org.cytoscape.work.TaskMonitor;
-import org.cytoscape.event.CyEventHelper;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.nrnb.gsoc.enrichment.RequestEngine.HTTPRequestEngine;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm.TermSource;
-import org.cytoscape.property.CyProperty;
-import org.cytoscape.property.CyProperty.SavePolicy;
-import org.cytoscape.property.SimpleCyProperty;
-import org.cytoscape.property.AbstractConfigDirPropsReader;
 
-import java.util.*;
 import java.math.BigDecimal;
+import java.util.*;
+
 /**
  * @author ighosh98
  * @description
@@ -35,10 +34,10 @@ public class ModelUtils {
     public static String CANONICAL = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "canonical name";
     public static String DISPLAY = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "display name";
     public static String FULLNAME = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "full name";
-    public static String ID = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR +  "@id";
-    public static String QUERYTERM = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR +  "query term";
+    public static String ID = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "@id";
+    public static String QUERYTERM = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "query term";
     public static String PROFILERID = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "database identifier";
-    public static Map<String,String> scientificNametoID = ModelUtils.getOrganisms();
+    public static Map<String, String> scientificNametoID = ModelUtils.getOrganisms();
 
     public static int MAX_SHORT_NAME_LENGTH = 15; // 15 characters, or 14 characters plus the dot
     public static int SECOND_SEGMENT_LENGTH = 3;
@@ -48,25 +47,25 @@ public class ModelUtils {
     public static String NET_ENRICHMENT_SETTINGS = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "enrichmentSettings";
     public static String NET_ORGANISMS = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "organism";
     public static String NET_GENE_ID_COLUMN = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "Gene ID Column";
-    public static String NET_NO_IEA = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR +  "No IEA";
-    public static String NET_DOMAIN_SCOPE =ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR +  "Domain Scope";
+    public static String NET_NO_IEA = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "No IEA";
+    public static String NET_DOMAIN_SCOPE = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "Domain Scope";
     public static String NET_SIGNIFICANCE_THRESHOLD_METHOD = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "Significance Threshold Method";
     public static String NET_BACKGROUND = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "Background";
-    public static String NET_USER_THRESHOLD = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR +  "User Threshold";
-    public static String  NET_ALL_RESULTS = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "All Results";
-    public static String  NET_MEASURE_UNDERREPRESENTATION = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "Measure Underrepresentation";
+    public static String NET_USER_THRESHOLD = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "User Threshold";
+    public static String NET_ALL_RESULTS = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "All Results";
+    public static String NET_MEASURE_UNDERREPRESENTATION = ENRICHMENT_NAMESPACE + NAMESPACE_SEPARATOR + "Measure Underrepresentation";
     // Create network view size threshold
     // See https://github.com/cytoscape/cytoscape-impl/blob/develop/core-task-impl/
     // src/main/java/org/cytoscape/task/internal/loadnetwork/AbstractLoadNetworkTask.java
     public static int DEF_VIEW_THRESHOLD = 3000;
+
     /**
-     *
      * @param network
      * @return
      */
     public static boolean haveQueryTerms(CyNetwork network) {
         if (network == null) return false;
-        for (CyNode node: network.getNodeList()) {
+        for (CyNode node : network.getNodeList()) {
             if (network.getRow(node).get(QUERYTERM, String.class) != null)
                 return true;
         }
@@ -74,11 +73,10 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param network
      */
     public static void selectQueryTerms(CyNetwork network) {
-        for (CyNode node: network.getNodeList()) {
+        for (CyNode node : network.getNodeList()) {
             if (network.getRow(node).get(QUERYTERM, String.class) != null)
                 network.getRow(node).set(CyNetwork.SELECTED, true);
             else
@@ -87,7 +85,6 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param network
      * @return
      */
@@ -102,7 +99,6 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param network
      * @param nodeView
      * @return
@@ -125,7 +121,6 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param registrar
      * @param network
      * @param name
@@ -149,25 +144,25 @@ public class ModelUtils {
     }
 
     public static void deleteEnrichmentTables(CyServiceRegistrar registrar, CyNetwork network) {
-      CyEventHelper cyEventHelper = registrar.getService(CyEventHelper.class);
-  	  CyTableManager tableManager = registrar.getService(CyTableManager.class);
-  		Set<CyTable> oldTables = ModelUtils.getEnrichmentTables(registrar, network);
-  		for (CyTable table : oldTables) {
-  			tableManager.deleteTable(table.getSUID());
-  			cyEventHelper.flushPayloadEvents();
-  		}
-  	}
+        CyEventHelper cyEventHelper = registrar.getService(CyEventHelper.class);
+        CyTableManager tableManager = registrar.getService(CyTableManager.class);
+        Set<CyTable> oldTables = ModelUtils.getEnrichmentTables(registrar, network);
+        for (CyTable table : oldTables) {
+            tableManager.deleteTable(table.getSUID());
+            cyEventHelper.flushPayloadEvents();
+        }
+    }
 
     /**
-     * @description Initialize the Enrichment Table
      * @param enrichmentTable
+     * @description Initialize the Enrichment Table
      */
     public static void setupEnrichmentTable(CyTable enrichmentTable) {
         if (enrichmentTable.getColumn(EnrichmentTerm.colGenesSUID) == null) {
-          enrichmentTable.createListColumn(EnrichmentTerm.colGenesSUID, Long.class, false);
+            enrichmentTable.createListColumn(EnrichmentTerm.colGenesSUID, Long.class, false);
         }
         if (enrichmentTable.getColumn(EnrichmentTerm.colNetworkSUID) == null) {
-          enrichmentTable.createColumn(EnrichmentTerm.colNetworkSUID, Long.class, false);
+            enrichmentTable.createColumn(EnrichmentTerm.colNetworkSUID, Long.class, false);
         }
         if (enrichmentTable.getColumn(EnrichmentTerm.colName) == null) {
             enrichmentTable.createColumn(EnrichmentTerm.colName, String.class, false);
@@ -209,7 +204,6 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param nodeTable
      * @return
      */
@@ -224,90 +218,87 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @return a mapping of organisms actual names to it's code names [ Example "Homo Sapien" : "hsapiens"
      * Reference: https://stackoverflow.com/questions/17037340/converting-jsonarray-to-arraylist/34081506
      */
-    public static Map<String,String> getOrganisms() {
-        if(scientificNametoID!=null){
+    public static Map<String, String> getOrganisms() {
+        if (scientificNametoID != null) {
             return scientificNametoID;
         }
         HTTPRequestEngine requestEngine = new HTTPRequestEngine();
         JSONArray result = requestEngine.makeGetRequest("util/organisms_list/");
-        if(result==null){
+        if (result == null) {
             return scientificNametoID;
         }
         JSONArray jsonArrayScientificName = new JSONArray();
-        JSONArray jsonArrayID= new JSONArray();
-        for(int i=0;i<result.size();i++){
+        JSONArray jsonArrayID = new JSONArray();
+        for (int i = 0; i < result.size(); i++) {
             JSONObject jsonObject = (JSONObject) result.get(i);
             jsonArrayScientificName.add(jsonObject.get("scientific_name"));
             jsonArrayID.add(jsonObject.get("id"));
         }
 
         scientificNametoID = new HashMap<>();
-        if(jsonArrayID!=null && jsonArrayScientificName!=null){
-            for(int i=0;i<jsonArrayID.size();i++){
-                scientificNametoID.put(jsonArrayScientificName.get(i).toString(),jsonArrayID.get(i).toString());
+        if (jsonArrayID != null && jsonArrayScientificName != null) {
+            for (int i = 0; i < jsonArrayID.size(); i++) {
+                scientificNametoID.put(jsonArrayScientificName.get(i).toString(), jsonArrayID.get(i).toString());
             }
         }
         return scientificNametoID;
     }
 
     /**
-     * @description returns the name of the organism
      * @param scientificNametoID
      * @return
+     * @description returns the name of the organism
      */
-    public static List<String> getOrganismsName(Map<String,String> scientificNametoID ) {
+    public static List<String> getOrganismsName(Map<String, String> scientificNametoID) {
         List<String> allSpecies = new ArrayList<String>();
-        for(String name : scientificNametoID.keySet()){
+        for (String name : scientificNametoID.keySet()) {
             allSpecies.add(name);
         }
         return allSpecies;
     }
 
 
-
     /**
-     * @description converts list to strinf
      * @param list
      * @return {String} Comma separated List
+     * @description converts list to strinf
      */
     public static String listToString(List<?> list) {
         String str = "";
         if (list == null || list.size() == 0) return str;
-        for (int i = 0; i < list.size()-1; i++) {
-            str += list.get(i)+",";
+        for (int i = 0; i < list.size() - 1; i++) {
+            str += list.get(i) + ",";
         }
-        return str + list.get(list.size()-1).toString();
+        return str + list.get(list.size() - 1).toString();
     }
 
     /**
-     * @description Convert comma separated strign to list
      * @param string
      * @return list
+     * @description Convert comma separated strign to list
      */
     public static List<String> stringToList(String string) {
         if (string == null || string.length() == 0) return new ArrayList<String>();
-        String [] arr = string.split(",");
+        String[] arr = string.split(",");
         return Arrays.asList(arr);
     }
 
     /**
-     *
      * @param network
      * @param settings
      */
     public static void updateEnrichmentSettings(CyNetwork network, Map<String, String> settings) {
         String setting = "";
         int index = 0;
-        for (String key: settings.keySet()) {
+        for (String key : settings.keySet()) {
             if (index > 0) {
                 setting += ";";
             }
-            setting += key+"="+settings.get(key);
-            index ++;
+            setting += key + "=" + settings.get(key);
+            index++;
         }
         createColumnIfNeeded(network.getDefaultNetworkTable(), String.class, NET_ENRICHMENT_SETTINGS);
         network.getRow(network).set(NET_ENRICHMENT_SETTINGS, setting);
@@ -324,7 +315,6 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param network
      * @return Enrichment Settings
      */
@@ -335,7 +325,7 @@ public class ModelUtils {
             return settings;
 
         String[] settingArray = setting.split(";");
-        for (String s: settingArray) {
+        for (String s : settingArray) {
             String[] pair = s.split("=");
             if (pair.length == 2) {
                 settings.put(pair[0], pair[1]);
@@ -345,7 +335,6 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param registrar
      * @param network
      * @return Set of Enrichment tables registered corresponding to a network
@@ -374,8 +363,6 @@ public class ModelUtils {
     }
 
 
-
-
     public static void replaceListColumnIfNeeded(CyTable table, Class<?> clazz, String columnName) {
         if (table.getColumn(columnName) != null)
             table.deleteColumn(columnName);
@@ -391,7 +378,7 @@ public class ModelUtils {
     }
 
     public static void copyRow(CyTable fromTable, CyTable toTable, CyIdentifiable from, CyIdentifiable to, List<String> columnsCreated) {
-        for (CyColumn col: fromTable.getColumns()) {
+        for (CyColumn col : fromTable.getColumns()) {
             // TODO: Is it OK to not check for this?
             //if (!columnsCreated.contains(col.getName()))
             //	continue;
@@ -415,14 +402,14 @@ public class ModelUtils {
 
     public static void copyNodes(CyNetwork fromNetwork, CyNetwork toNetwork, Map<String, CyNode> nodeMap,
                                  String keyColumn, List<String> toColumns) {
-        for (CyNode node: fromNetwork.getNodeList()) {
+        for (CyNode node : fromNetwork.getNodeList()) {
             String key = fromNetwork.getRow(node).get(keyColumn, String.class);
             // TODO: double-check what happens when key == null
             if (key != null && !nodeMap.containsKey(key)) {
                 CyNode newNode = toNetwork.addNode();
                 nodeMap.put(key, newNode);
                 toNetwork.getRow(newNode).set(CyNetwork.NAME, key);
-                for (String col: toColumns) {
+                for (String col : toColumns) {
                     toNetwork.getRow(newNode).set(col, key);
                 }
             }
@@ -431,7 +418,7 @@ public class ModelUtils {
 
     public static void createNodeMap(CyNetwork network, Map<String, CyNode> nodeMap, String column) {
         // Get all of the nodes in the network
-        for (CyNode node: network.getNodeList()) {
+        for (CyNode node : network.getNodeList()) {
             String key = network.getRow(node).get(column, String.class);
             nodeMap.put(key, node);
         }
@@ -439,7 +426,7 @@ public class ModelUtils {
 
     public static List<String> copyColumns(CyTable fromTable, CyTable toTable) {
         List<String> columns = new ArrayList<String>();
-        for (CyColumn col: fromTable.getColumns()) {
+        for (CyColumn col : fromTable.getColumns()) {
             String fqn = col.getName();
             // Does that column already exist in our target?
             if (toTable.getColumn(fqn) == null) {
@@ -449,19 +436,19 @@ public class ModelUtils {
                     // toTable.createListColumn(fqn, col.getListElementType(), col.isImmutable(), (List<?>)col.getDefaultValue());
                     if (col.getListElementType().equals(String.class))
                         toTable.createListColumn(fqn, String.class, col.isImmutable(),
-                                (List<String>)col.getDefaultValue());
+                                (List<String>) col.getDefaultValue());
                     else if (col.getListElementType().equals(Long.class))
                         toTable.createListColumn(fqn, Long.class, col.isImmutable(),
-                                (List<Long>)col.getDefaultValue());
+                                (List<Long>) col.getDefaultValue());
                     else if (col.getListElementType().equals(Double.class))
                         toTable.createListColumn(fqn, Double.class, col.isImmutable(),
-                                (List<Double>)col.getDefaultValue());
+                                (List<Double>) col.getDefaultValue());
                     else if (col.getListElementType().equals(Integer.class))
                         toTable.createListColumn(fqn, Integer.class, col.isImmutable(),
-                                (List<Integer>)col.getDefaultValue());
+                                (List<Integer>) col.getDefaultValue());
                     else if (col.getListElementType().equals(Boolean.class))
                         toTable.createListColumn(fqn, Boolean.class, col.isImmutable(),
-                                (List<Boolean>)col.getDefaultValue());
+                                (List<Boolean>) col.getDefaultValue());
                 } else {
                     toTable.createColumn(fqn, col.getType(), col.isImmutable(), col.getDefaultValue());
                     columns.add(fqn);
@@ -479,7 +466,7 @@ public class ModelUtils {
                 registrar.getService(CyNetworkViewManager.class).getNetworkViews(network);
 
         // At some point, figure out a better way to do this
-        for (CyNetworkView view: views) {
+        for (CyNetworkView view : views) {
             return view;
         }
         return null;
@@ -491,79 +478,80 @@ public class ModelUtils {
      * @param response JSON response received by making API call
      * @return structured list of data which can be used to populate result table
      */
-    public static List<EnrichmentTerm> getEnrichmentfromJSON(JSONObject response, CyNetwork network, List<String> nodeNameList,Map<String, Long> enrichmentNodesMap){
+    public static List<EnrichmentTerm> getEnrichmentfromJSON(JSONObject response, CyNetwork network, List<String> nodeNameList, Map<String, Long> enrichmentNodesMap) {
         JSONArray enrichmentArray = getResultsFromJSON(response, JSONArray.class);
         if (enrichmentArray == null) {
             return null;
         }
         List<EnrichmentTerm> results = new ArrayList<>();
-        for(Object enrObject : enrichmentArray){
+        for (Object enrObject : enrichmentArray) {
             JSONObject enr = (JSONObject) enrObject;
             EnrichmentTerm currTerm = new EnrichmentTerm();
-            if(enr.containsKey("description")){
+            if (enr.containsKey("description")) {
                 currTerm.setDescription((String) enr.get("description"));
             }
-            if(enr.containsKey("intersection_size")){
+            if (enr.containsKey("intersection_size")) {
                 currTerm.setIntersectionSize(((Number) enr.get("intersection_size")).intValue());
             }
-            if(enr.containsKey("effective_domain_size")){
+            if (enr.containsKey("effective_domain_size")) {
                 currTerm.setEffectiveDomainSize(((Number) enr.get("effective_domain_size")).intValue());
             }
-            if(enr.containsKey("p_value")){
+            if (enr.containsKey("p_value")) {
                 String content = enr.get("p_value").toString();
                 BigDecimal d = new BigDecimal(content);
                 String contentNoScientific = d.toPlainString();
                 currTerm.setPValue(contentNoScientific);
             }
-            if(enr.containsKey("precision")){
+            if (enr.containsKey("precision")) {
                 String content = enr.get("precision").toString();
                 double precision = Double.parseDouble(content);
                 currTerm.setPrecision(precision);
             }
-            if(enr.containsKey("recall")){
+            if (enr.containsKey("recall")) {
                 String content = enr.get("recall").toString();
                 double recall = Double.parseDouble(content);
                 currTerm.setRecall(recall);
             }
-            if(enr.containsKey("native")){
+            if (enr.containsKey("native")) {
                 String content = enr.get("native").toString();
                 currTerm.setTermID(content);
             }
-            if(enr.containsKey("goshv")){
+            if (enr.containsKey("goshv")) {
                 String content = enr.get("goshv").toString();
                 double goshv = Double.parseDouble(content);
                 //currTerm.setRecall(goshv);
             }
-            if(enr.containsKey("term_size")){
+            if (enr.containsKey("term_size")) {
                 String content = enr.get("term_size").toString();
                 int termSize = Integer.parseInt(content);
                 currTerm.setTermSize(termSize);
             }
-            if(enr.containsKey("query_size")){
+            if (enr.containsKey("query_size")) {
                 String content = enr.get("query_size").toString();
                 int termSize = Integer.parseInt(content);
                 currTerm.setQuerySize(termSize);
             }
-            if(enr.containsKey("significant")){
+            if (enr.containsKey("significant")) {
                 currTerm.setSignificant(((Boolean) enr.get("significant")).booleanValue());
             }
-            if(enr.containsKey("source")){
+            if (enr.containsKey("source")) {
                 String content = enr.get("source").toString();
-                if(content==null || content.isEmpty()){
-                    currTerm.setSource((String) "");
-                } else{
-                    currTerm.setSource((String) content);
+                if (content == null || content.isEmpty()) {
+                    currTerm.setSource("");
+                } else {
+                    currTerm.setSource(content);
                 }
             }
-            if(enr.containsKey("name")){
+            if (enr.containsKey("name")) {
                 currTerm.setName((String) enr.get("name"));
-            } if(enr.containsKey("intersections")){
+            }
+            if (enr.containsKey("intersections")) {
                 List<String> currGeneList = new ArrayList<String>();
                 List<Long> currNodeList = new ArrayList<Long>();
-                JSONArray genes = (JSONArray)enr.get("intersections");
-                for(int i=0;i<genes.size();i++){
-                    if((genes.get(i)).toString().length()>2){
-                        String enrGeneEnsemblID = (String)nodeNameList.get(i);
+                JSONArray genes = (JSONArray) enr.get("intersections");
+                for (int i = 0; i < genes.size(); i++) {
+                    if ((genes.get(i)).toString().length() > 2) {
+                        String enrGeneEnsemblID = nodeNameList.get(i);
                         String enrGeneNodeName = enrGeneEnsemblID;
                         final Long nodeSUID = enrichmentNodesMap.get(enrGeneNodeName);
                         currNodeList.add(nodeSUID);
@@ -586,12 +574,11 @@ public class ModelUtils {
     }
 
     /**
-     *
      * @param network
      * @return Column to be chosen for fetching GeneID
      */
     public static String getNetGeneIDColumn(CyNetwork network) {
-        if (network.getDefaultNetworkTable().getColumn(NET_GENE_ID_COLUMN) == null){
+        if (network.getDefaultNetworkTable().getColumn(NET_GENE_ID_COLUMN) == null) {
             return null;
         }
         return network.getRow(network).get(NET_GENE_ID_COLUMN, String.class);
@@ -599,6 +586,7 @@ public class ModelUtils {
 
     /**
      * Sets the column which is to be used to choose GeneID
+     *
      * @param network
      * @param column
      */
@@ -655,7 +643,7 @@ public class ModelUtils {
      * significance_threshold_method setter
      */
     public static void setNetSignificanceThresholdMethod(CyNetwork network, String significanceThresholdMethod) {
-        if(network.getDefaultNetworkTable()==null){
+        if (network.getDefaultNetworkTable() == null) {
             System.out.println("No default network table");
             return;
         }
@@ -737,7 +725,7 @@ public class ModelUtils {
     public static void copyNodeAttributes(CyNetwork from, CyNetwork to,
                                           Map<String, CyNode> nodeMap, String column) {
         List<String> columnsCreated = copyColumns(from.getDefaultNodeTable(), to.getDefaultNodeTable());
-        for (CyNode node: from.getNodeList()) {
+        for (CyNode node : from.getNodeList()) {
             String nodeKey = from.getRow(node).get(column, String.class);
             if (!nodeMap.containsKey(nodeKey))
                 continue;
@@ -747,36 +735,36 @@ public class ModelUtils {
     }
 
 
-	public static CyProperty<Properties> getPropertyService(CyServiceRegistrar registrar,
-			SavePolicy policy) {
-			String name = "enrichment";
-			if (policy.equals(SavePolicy.SESSION_FILE)) {
-				CyProperty<Properties> service = registrar.getService(CyProperty.class, "(cyPropertyName="+name+")");
-				// Do we already have a session with our properties
-				if (service.getSavePolicy().equals(SavePolicy.SESSION_FILE))
-					return service;
+    public static CyProperty<Properties> getPropertyService(CyServiceRegistrar registrar,
+                                                            SavePolicy policy) {
+        String name = "enrichment";
+        if (policy.equals(SavePolicy.SESSION_FILE)) {
+            CyProperty<Properties> service = registrar.getService(CyProperty.class, "(cyPropertyName=" + name + ")");
+            // Do we already have a session with our properties
+            if (service.getSavePolicy().equals(SavePolicy.SESSION_FILE))
+                return service;
 
-				// Either we have a null session or our properties aren't in this session
-				Properties props = new Properties();
-				service = new SimpleCyProperty(name, props, Properties.class, SavePolicy.SESSION_FILE);
-				Properties serviceProps = new Properties();
-				serviceProps.setProperty("cyPropertyName", service.getName());
-				registrar.registerAllServices(service, serviceProps);
-				return service;
-			} else if (policy.equals(SavePolicy.CONFIG_DIR) || policy.equals(SavePolicy.SESSION_FILE_AND_CONFIG_DIR)) {
-				CyProperty<Properties> service = new ConfigPropsReader(policy, name);
-				Properties serviceProps = new Properties();
-				serviceProps.setProperty("cyPropertyName", service.getName());
-				registrar.registerAllServices(service, serviceProps);
-				return service;
-		}
-		return null;
-	}
+            // Either we have a null session or our properties aren't in this session
+            Properties props = new Properties();
+            service = new SimpleCyProperty(name, props, Properties.class, SavePolicy.SESSION_FILE);
+            Properties serviceProps = new Properties();
+            serviceProps.setProperty("cyPropertyName", service.getName());
+            registrar.registerAllServices(service, serviceProps);
+            return service;
+        } else if (policy.equals(SavePolicy.CONFIG_DIR) || policy.equals(SavePolicy.SESSION_FILE_AND_CONFIG_DIR)) {
+            CyProperty<Properties> service = new ConfigPropsReader(policy, name);
+            Properties serviceProps = new Properties();
+            serviceProps.setProperty("cyPropertyName", service.getName());
+            registrar.registerAllServices(service, serviceProps);
+            return service;
+        }
+        return null;
+    }
 
-  public static class ConfigPropsReader extends AbstractConfigDirPropsReader {
-		ConfigPropsReader(SavePolicy policy, String name) {
-			super(name, "enrichment.props", policy);
-		}
-	}
+    public static class ConfigPropsReader extends AbstractConfigDirPropsReader {
+        ConfigPropsReader(SavePolicy policy, String name) {
+            super(name, "enrichment.props", policy);
+        }
+    }
 
 }

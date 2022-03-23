@@ -5,10 +5,11 @@ package org.nrnb.gsoc.enrichment.constants;
  */
 public final class APP_CONSTANTS {
 
-    private APP_CONSTANTS(){}
-
     /**
      * Wait time in seconds for enrichment task before exiting.
      */
     public static final long TIMEOUT = 20;
+
+    private APP_CONSTANTS() {
+    }
 }

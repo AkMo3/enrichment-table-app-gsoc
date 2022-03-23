@@ -9,13 +9,13 @@ import org.apache.http.impl.client.HttpClients;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.work.TaskMonitor;
-
 import org.json.simple.JSONArray;
-import org.json.simple.JSONValue;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.nrnb.gsoc.enrichment.constants.APP_CONSTANTS;
+import org.nrnb.gsoc.enrichment.constants.HTTP_RESPONSE_CODES;
 import org.nrnb.gsoc.enrichment.utils.ModelUtils;
 
 import java.io.IOException;
@@ -31,13 +31,13 @@ public class HTTPRequestEngine {
 
     private final String basicURL = "https://biit.cs.ut.ee/gprofiler/api/";
 
-    public HTTPRequestEngine(){
+    public HTTPRequestEngine() {
     }
 
     /**
-     * @description function fires GET Request
      * @param endpoint API endpoint
      * @return
+     * @description function fires GET Request
      */
     public JSONArray makeGetRequest(String endpoint) {
         CloseableHttpClient httpclient = HttpClients.createDefault();
@@ -54,10 +54,10 @@ public class HTTPRequestEngine {
             e.printStackTrace();
         }
         int statusCode = response.getStatusLine().getStatusCode();
-        if(statusCode!=200 && statusCode!=202){
+        if (statusCode != HTTP_RESPONSE_CODES.OK && statusCode != HTTP_RESPONSE_CODES.ACCEPTED) {
             return null;
         }
-        JSONArray jsonResponse=null;
+        JSONArray jsonResponse = null;
         try {
             jsonResponse = (JSONArray) new JSONParser().parse(new InputStreamReader(response.getEntity().getContent()));
         } catch (IOException e) {
@@ -69,38 +69,41 @@ public class HTTPRequestEngine {
     }
 
     /**
-     * @description function fires POST Request by filling in necessary parameters
-     * @param network Network being used for fetching data
-     * @param endpoint API endpoint
-     * @param parameters all parameters fetched from the network or set by the user
-     * @param monitor Task Monitor
+     * Function fires POST Request by filling in necessary parameters
+     *
+     * @param network            Network being used for fetching data
+     * @param endpoint           API endpoint
+     * @param parameters         all parameters fetched from the network or set by the user
+     * @param monitor            Task Monitor
      * @param isBackgroundNeeded decides if we need the background nodes or not
-     * @return
+     * @return {@code org.json.simple.JSONObject} Received as response for POST request.
+     *
      */
-    public JSONObject makePostRequest(CyNetwork network,String endpoint , Map<String,Object> parameters, TaskMonitor monitor, boolean isBackgroundNeeded) {
+    public JSONObject makePostRequest(CyNetwork network, String endpoint, Map<String, Object> parameters,
+                                      TaskMonitor monitor, boolean isBackgroundNeeded) {
 
-        if(ModelUtils.getNetUserThreshold(network)!=null){
-            parameters.put("user_threshold",ModelUtils.getNetUserThreshold(network));
+        if (ModelUtils.getNetUserThreshold(network) != null) {
+            parameters.put("user_threshold", ModelUtils.getNetUserThreshold(network));
         }
-        if(ModelUtils.getNetAllResults(network)!=null){
-            parameters.put("all_results",ModelUtils.getNetAllResults(network));
+        if (ModelUtils.getNetAllResults(network) != null) {
+            parameters.put("all_results", ModelUtils.getNetAllResults(network));
         }
-        if(ModelUtils.getNetNoIEA(network)!=null){
-            parameters.put("no_iea",ModelUtils.getNetNoIEA(network));
-        } else{
-            parameters.put("no_iea",true);
-        }
-
-
-        if(ModelUtils.getNetSignificanceThresholdMethod(network)!=null){
-            parameters.put("significance_threshold_method",ModelUtils.getNetSignificanceThresholdMethod(network));
-        } else{
-            parameters.put("significance_threshold_method","g_SCS");
-
+        if (ModelUtils.getNetNoIEA(network) != null) {
+            parameters.put("no_iea", ModelUtils.getNetNoIEA(network));
+        } else {
+            parameters.put("no_iea", true);
         }
 
-        StringBuffer backgroundNodes = new StringBuffer("");
-        if(isBackgroundNeeded) {
+
+        if (ModelUtils.getNetSignificanceThresholdMethod(network) != null) {
+            parameters.put("significance_threshold_method", ModelUtils.getNetSignificanceThresholdMethod(network));
+        } else {
+            parameters.put("significance_threshold_method", "g_SCS");
+
+        }
+
+        StringBuffer backgroundNodes = new StringBuffer();
+        if (isBackgroundNeeded) {
             List<CyNode> nodeList = network.getNodeList();
             Set<String> nodeNameList = new HashSet<>();
             for (CyNode node : nodeList) {
@@ -122,12 +125,12 @@ public class HTTPRequestEngine {
                 }
             }
         }
-        if(!backgroundNodes.toString().isEmpty())
-            parameters.put("background",backgroundNodes.toString());
-        if(backgroundNodes.toString().isEmpty()){
-            parameters.put("domain_scope","annotated");
-        } else{
-            parameters.put("domain_scope","custom_annotated");
+        if (!backgroundNodes.toString().isEmpty())
+            parameters.put("background", backgroundNodes.toString());
+        if (backgroundNodes.toString().isEmpty()) {
+            parameters.put("domain_scope", "annotated");
+        } else {
+            parameters.put("domain_scope", "custom_annotated");
         }
         CloseableHttpClient httpclient = HttpClients.createDefault();
         StringBuffer urlConverter = new StringBuffer();
@@ -153,19 +156,18 @@ public class HTTPRequestEngine {
         } catch (IOException e) {
             e.printStackTrace();
             monitor.setStatusMessage("Could not fetch data. Check your internet connection");
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
             monitor.setStatusMessage("Task Cancelled. Returning back");
         }
         int statusCode = response.getStatusLine().getStatusCode();
-        if(statusCode!=200 && statusCode!=202){
-            monitor.showMessage(TaskMonitor.Level.ERROR, "Got "+
-                    response.getStatusLine().getStatusCode()+" code from server");
+        if (statusCode != HTTP_RESPONSE_CODES.OK && statusCode != HTTP_RESPONSE_CODES.ACCEPTED) {
+            monitor.showMessage(TaskMonitor.Level.ERROR, "Got " +
+                    response.getStatusLine().getStatusCode() + " code from server");
             monitor.setStatusMessage("Invalid Query Parameters");
             return null;
         }
-        JSONObject jsonResponse=null;
+        JSONObject jsonResponse = null;
         try {
             jsonResponse = (JSONObject) new JSONParser().parse(new InputStreamReader(response.getEntity().getContent()));
         } catch (IOException | ParseException e) {
@@ -174,4 +176,4 @@ public class HTTPRequestEngine {
         }
         return jsonResponse;
     }
-};
+}

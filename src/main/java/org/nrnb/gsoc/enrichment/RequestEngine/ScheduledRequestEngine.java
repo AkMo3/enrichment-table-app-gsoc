@@ -18,7 +18,7 @@ public class ScheduledRequestEngine {
      * @param httpClient Client through which Post Request to be sent.
      * @param httpPost   Post data to be sent.
      * @param timeout    Maximum time in seconds to wait until throw exception.
-     * @return           {@code CloseableHttpResponse}, if response received within time limit.
+     * @return {@code CloseableHttpResponse}, if response received within time limit.
      * @throws IOException If response not received within time limit.
      */
     public static CloseableHttpResponse sendPostRequestWithTimeLimit(CloseableHttpClient httpClient, HttpPost httpPost,
