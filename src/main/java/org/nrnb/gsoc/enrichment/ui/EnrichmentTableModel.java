@@ -44,6 +44,10 @@ public class EnrichmentTableModel extends AbstractTableModel {
         return rowNames;
     }
 
+    public CyTable getCyTable() {
+        return cyTable;
+    }
+
     /**
      * @description Fetch the value with a particular column name as an enum for a specific row
      * @param row

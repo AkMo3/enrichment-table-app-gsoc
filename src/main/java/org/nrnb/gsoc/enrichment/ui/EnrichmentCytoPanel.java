@@ -18,10 +18,13 @@ import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.session.events.SessionLoadedEvent;
 import org.cytoscape.session.events.SessionLoadedListener;
+import org.jfree.chart.ui.UIUtils;
 import org.json.simple.JSONObject;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm.TermSource;
 import org.nrnb.gsoc.enrichment.tasks.EnrichmentAdvancedOptionsTask;
+import org.nrnb.gsoc.enrichment.tasks.EnrichmentChartVisualisationFactory;
+import org.nrnb.gsoc.enrichment.tasks.EnrichmentChartVisualisationTask;
 import org.nrnb.gsoc.enrichment.tasks.EnrichmentTask;
 import org.nrnb.gsoc.enrichment.tasks.FilterEnrichmentTableTask;
 import org.nrnb.gsoc.enrichment.tasks.ExportEnrichmentTableTask;
@@ -69,6 +72,7 @@ public class EnrichmentCytoPanel extends JPanel
     JButton butExportTable;
     JButton butRunProfiler;
     JButton butFilter;
+    JButton butRingChart;
     JLabel organismSelect;
     JLabel geneIdSelect;
     TableColumnModel columnModel;
@@ -177,6 +181,10 @@ public class EnrichmentCytoPanel extends JPanel
             if (network != null) {
                 tm.execute(new TaskIterator(new EnrichmentAdvancedOptionsTask(registrar)));
             }
+        } else if (e.getSource().equals(butRingChart)) {
+            if (network != null) {
+                tm.execute(new TaskIterator(new EnrichmentChartVisualisationFactory(enrichmentTable)));
+            }
         }
     }
 
@@ -237,9 +245,19 @@ public class EnrichmentCytoPanel extends JPanel
         butFilter.setFocusPainted(false);
         butFilter.setBorder(BorderFactory.createEmptyBorder(2,10,2,10));
 
+        butRingChart = new JButton(IconManager.ICON_PIE_CHART);
+        butRingChart.setFont(iconFont);
+        butRingChart.addActionListener(this);
+        butRingChart.setToolTipText("Enrichment Pie Chart");
+        butRingChart.setBorderPainted(false);
+        butRingChart.setContentAreaFilled(false);
+        butRingChart.setFocusPainted(false);
+        butRingChart.setBorder(BorderFactory.createEmptyBorder(2,10,2,10));
+
 
         buttonsPanelLeft.add(butRunProfiler);
         buttonsPanelLeft.add(butFilter);
+        buttonsPanelLeft.add(butRingChart);
 
         // Add enrichment map button here if EnrichmentMap is loaded
 
@@ -285,6 +303,7 @@ public class EnrichmentCytoPanel extends JPanel
         butExportTable.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 10));
         butExportTable.setEnabled(false);
         butFilter.setEnabled(false);
+        butRingChart.setEnabled(false);
 
         butAdvancedOptions = new JButton(IconManager.ICON_COG);
         butAdvancedOptions.setFont(iconFont);
@@ -327,6 +346,7 @@ public class EnrichmentCytoPanel extends JPanel
 
         buttonsPanelLeft.add(butRunProfiler);
         buttonsPanelLeft.add(butFilter);
+        buttonsPanelLeft.add(butRingChart);
 
         // Add enrichment map button here if EnrichmentMap is loaded
 
@@ -386,6 +406,7 @@ public class EnrichmentCytoPanel extends JPanel
         buttonsPanelRight.add(butAdvancedOptions);
         butExportTable.setEnabled(true);
         butFilter.setEnabled(true);
+        butRingChart.setEnabled(true);
         topPanel = new JPanel(new BorderLayout());
         topPanel.add(buttonsPanelLeft, BorderLayout.WEST);
         topPanel.add(buttonsPanelCenter, BorderLayout.CENTER);
