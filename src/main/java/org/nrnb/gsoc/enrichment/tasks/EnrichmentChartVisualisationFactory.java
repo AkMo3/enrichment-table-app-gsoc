@@ -3,7 +3,6 @@ package org.nrnb.gsoc.enrichment.tasks;
 import org.cytoscape.model.CyTable;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.ObservableTask;
-import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 import org.jfree.chart.ui.UIUtils;
 
