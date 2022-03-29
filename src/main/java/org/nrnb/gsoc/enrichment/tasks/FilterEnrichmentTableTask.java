@@ -15,11 +15,13 @@ import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.json.JSONResult;
 import org.cytoscape.work.util.ListMultipleSelection;
+import org.nrnb.gsoc.enrichment.model.EnrichmentTerm;
 import org.nrnb.gsoc.enrichment.model.EnrichmentTerm.TermSource;
 import org.nrnb.gsoc.enrichment.ui.EnrichmentCytoPanel;
 import org.nrnb.gsoc.enrichment.ui.EnrichmentTableModel;
 import org.nrnb.gsoc.enrichment.utils.ModelUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -58,8 +60,9 @@ public class FilterEnrichmentTableTask extends AbstractTask implements Observabl
         this.network = applicationManager.getCurrentNetwork();
         this.enrichmentPanel = panel;
         final CyColumn evidenceColumn = ModelUtils.getEnrichmentTable(registrar, network, TermSource.ALL.getTable())
-                .getColumn("termId");
-        this.evidenceCodes = new ListMultipleSelection<String>(evidenceColumn.getValues(String.class));
+                .getColumn(EnrichmentTerm.colTermID);
+        System.out.println(evidenceColumn.getValues(String.class).size());
+        this.evidenceCodes = new ListMultipleSelection<String>(new ArrayList<String>(new HashSet<String>(evidenceColumn.getValues(String.class))));
     }
 
 
