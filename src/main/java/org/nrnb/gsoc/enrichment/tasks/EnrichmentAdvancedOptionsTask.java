@@ -76,31 +76,21 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
             params="lookup=begins", groups={"Required settings"}, gravity=10.0)
     public ListSingleSelection<String> geneID;
 
+    @Tunable(description = "Always display Global organisms list",
+            longDescription = "The default (false) is to use organisms directly from network provided data." +
+                    " If true, organism list will be expanded with default organisms list.",
+            groups = {"Optional settings"},
+            tooltip = "<html>Check the box to include default organism list.</html>")
+    public static boolean useGlobalOrganisms = false;
+
     public Map<String,String> scientificNametoID;
 
     public EnrichmentAdvancedOptionsTask(CyServiceRegistrar registrar) {
         this.registrar = registrar;
-        applicationManager = registrar.getService(CyApplicationManager.class);
+        this.applicationManager = registrar.getService(CyApplicationManager.class);
         this.network = applicationManager.getCurrentNetwork();
         nodeTable = network.getDefaultNodeTable();
-        this.scientificNametoID = ModelUtils.getOrganisms();
-        List<String> speciesList = new ArrayList<>();
-        this.enrichmentPanel = (EnrichmentCytoPanel) enrichmentPanel;
-        if(scientificNametoID!=null) {
-            for (Map.Entry<String, String> it : scientificNametoID.entrySet()) {
-                speciesList.add(it.getKey());
-                if(it.getValue().equals(ModelUtils.getNetOrganism(network))){
-                  displayValue = it.getKey();
-                }
-            }
-            organism = new ListSingleSelection<String>(speciesList);
-            if(ModelUtils.getNetOrganism(network)!=null){
-              organism.setSelectedValue(displayValue);
-            } else{
-              organism.setSelectedValue("Homo sapiens");
-            }
-            //ModelUtils.setNetOrganism(network,"hsapiens");
-        }
+        setOrganism(network);
         List<String> stringCol = new ArrayList<String>();
         for (CyColumn col : nodeTable.getColumns()) {
             if (col.getType().equals(String.class)) {
@@ -125,7 +115,41 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
         significance_threshold_method.setSelectedValue("g_SCS");
         ModelUtils.setNetSignificanceThresholdMethod(network,"g_SCS");
         ModelUtils.setNetUserThreshold(network,0.05);
+    }
 
+    private void setOrganism(final CyNetwork network) {
+        OrganismNetworkEntry otherNetworks[] = OrganismNetworkEntry.values();
+        ArrayList<String> previousNetworkData = new ArrayList<>();
+        for (OrganismNetworkEntry entry: otherNetworks) {
+            previousNetworkData.addAll(getList(network, entry.toString()));
+        }
+        if (previousNetworkData.isEmpty() || useGlobalOrganisms) {
+            this.scientificNametoID = ModelUtils.getOrganisms();
+            List<String> speciesList = new ArrayList<>();
+            if (scientificNametoID != null) {
+                for (Map.Entry<String, String> it : scientificNametoID.entrySet()) {
+                    speciesList.add(it.getKey());
+                    if (it.getValue().equals(ModelUtils.getNetOrganism(network))) {
+                        displayValue = it.getKey();
+                    }
+                }
+                organism = new ListSingleSelection<String>(speciesList);
+                if (ModelUtils.getNetOrganism(network) != null) {
+                    organism.setSelectedValue(displayValue);
+                } else {
+                    organism.setSelectedValue("Homo sapiens");
+                }
+            }
+        }
+        else {
+            organism = new ListSingleSelection<>(previousNetworkData);
+            organism.setSelectedValue(previousNetworkData.get(0));
+        }
+    }
+
+    private List<String> getList(CyNetwork network, String columnName) {
+        Optional<CyColumn> cyColumn = Optional.ofNullable(network.getDefaultNetworkTable().getColumn(columnName));
+        return cyColumn.isPresent() ? cyColumn.get().getValues(String.class) : Collections.emptyList();
     }
 
     //user sets the cycol -> update default -> the run the query
@@ -169,5 +193,22 @@ public class EnrichmentAdvancedOptionsTask extends AbstractTask implements Obser
     @Override
     public List<Class<?>> getResultClasses() {
       return Arrays.asList(JSONResult.class, String.class, Long.class, CyTable.class);
+    }
+
+    private enum OrganismNetworkEntry {
+        STRINGAPP("species"),
+        NDEX("organism"),
+        PSIQCUIC("Taxonomy ID"),
+        IntAct("IntAct::species");
+
+        private final String columnName;
+
+        OrganismNetworkEntry(String columnName) {
+            this.columnName = columnName;
+        }
+
+        public String toString() {
+            return this.columnName;
+        }
     }
   }
